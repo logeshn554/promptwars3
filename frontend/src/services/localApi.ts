@@ -464,64 +464,112 @@ export const localLegalApi = {
       };
     }
 
-    // 3. Grounded Q&A for Resignation / Termination
-    if (qLower.includes('resign') || qLower.includes('resignation') || qLower.includes('notice')) {
-      const isV2 = doc?.metadata.filename.toLowerCase().includes('v2') || doc?.rawText.includes('90 days');
-      const days = isV2 ? 'ninety (90) days' : 'thirty (30) days';
-      return {
-        question: payload.question,
-        answer: `In the event of voluntary resignation, you must provide ${days} prior written notice according to Clause 11.2.`,
-        citations: [
-          {
-            document_id: documentId,
-            document_name: doc?.metadata.filename || 'agreement.txt',
-            page_number: 1,
-            clause_number: '11.2',
-            section_title: 'TERMINATION',
-            excerpt: `In the event of voluntary resignation, Employee shall provide ${days} prior written notice.`,
-          },
-        ],
-        confidence: 0.96,
-        insufficient_evidence: false,
-        suggested_questions: ['Can the notice period be negotiated?', 'What happens to bonus payments during notice?'],
-        verified: true,
-        disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
-      };
-    }
+    // 3. Dynamic Evidence-Grounded Search across document text and clauses
+    const docText = (doc?.rawText || '').toLowerCase();
+    const clauses = doc?.clauses || [];
 
-    // 4. Grounded Q&A for Non-compete
-    if (qLower.includes('non-compete') || qLower.includes('compete') || qLower.includes('restriction')) {
-      const isV2 = doc?.metadata.filename.toLowerCase().includes('v2') || doc?.rawText.includes('12 months');
-      const duration = isV2 ? 'twelve (12) months' : 'six (6) months';
+    // Check if query matches specific keywords
+    const isTermination = qLower.includes('resign') || qLower.includes('resignation') || qLower.includes('notice') || qLower.includes('terminate');
+    const isNonCompete = qLower.includes('compete') || qLower.includes('non-compete') || qLower.includes('restriction');
+    const isCompensation = qLower.includes('pay') || qLower.includes('salary') || qLower.includes('compensation') || qLower.includes('bonus') || qLower.includes('fee');
+    const isDuties = qLower.includes('duty') || qLower.includes('duties') || qLower.includes('obligation') || qLower.includes('responsibilit');
+    const isOverview = qLower.includes('pdf') || qLower.includes('what is') || qLower.includes('contain') || qLower.includes('summary') || qLower.includes('about');
+
+    let matchedClause = clauses.find((c) => {
+      const cText = (c.title + ' ' + c.original_text + ' ' + c.plain_language_explanation).toLowerCase();
+      if (isTermination && (c.category === 'TERMINATION' || cText.includes('notice') || cText.includes('resign'))) return true;
+      if (isNonCompete && (c.category === 'NON_COMPETE' || cText.includes('compete'))) return true;
+      if (isCompensation && (c.category === 'COMPENSATION' || c.category === 'PAYMENT' || cText.includes('salary'))) return true;
+      if (isDuties && c.obligations.length > 0) return true;
+      return false;
+    });
+
+    if (matchedClause) {
       return {
         question: payload.question,
-        answer: `Under Clause 8.1, you are prohibited from engaging in any competing software enterprise within the territory for ${duration} following termination.`,
-        citations: [
+        answer: matchedClause.plain_language_explanation,
+        citations: matchedClause.citations && matchedClause.citations.length > 0 ? matchedClause.citations : [
           {
             document_id: documentId,
-            document_name: doc?.metadata.filename || 'agreement.txt',
+            document_name: doc?.metadata.filename || 'agreement.docx',
             page_number: 1,
-            clause_number: '8.1',
-            section_title: 'RESTRICTIVE COVENANTS',
-            excerpt: `Employee shall not engage in any competing software enterprise for ${duration} post-termination.`,
-          },
+            clause_number: matchedClause.title.split(':')[0] || '1.1',
+            excerpt: matchedClause.original_text,
+          }
         ],
         confidence: 0.94,
         insufficient_evidence: false,
-        suggested_questions: ['Is this non-compete valid without consideration?', 'Does this cover side projects?'],
+        suggested_questions: matchedClause.questions_to_clarify.length > 0 ? matchedClause.questions_to_clarify : ['What are the termination terms?', 'What are the payment deadlines?'],
         verified: true,
         disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
       };
     }
 
-    // General answer
+    if (isOverview && doc) {
+      const summaryText = doc.summary ? doc.summary.purpose : 'This agreement establishes formal legal commitments, duties, and operational conditions between the parties.';
+      const keyClauses = doc.clauses.map((c) => c.title).slice(0, 3).join(', ');
+      return {
+        question: payload.question,
+        answer: `The document is a ${doc.metadata.document_type || 'Legal Agreement'}. ${summaryText} Primary provisions include: ${keyClauses || 'obligations, termination guidelines, and mutual covenants'}.`,
+        citations: doc.clauses[0]?.citations || [],
+        confidence: 0.92,
+        insufficient_evidence: false,
+        suggested_questions: ['What happens if I resign?', 'What are the primary obligations?'],
+        verified: true,
+        disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
+      };
+    }
+
+    if (isDuties && doc) {
+      const obls = doc.obligations.map((o) => `${o.actor}: ${o.action} ${o.object}`).slice(0, 3).join('. ');
+      return {
+        question: payload.question,
+        answer: `The key duties outlined in this document are: ${obls || 'fulfilling contract covenants, complying with confidentiality, and meeting required timelines'}.`,
+        citations: doc.clauses[0]?.citations || [],
+        confidence: 0.91,
+        insufficient_evidence: false,
+        suggested_questions: ['What are the consequences of breach?', 'What is the notice period?'],
+        verified: true,
+        disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
+      };
+    }
+
+    // Dynamic extraction: find sentences containing query words
+    const queryWords = qLower.split(/\s+/).filter((w) => w.length > 3 && !['what', 'this', 'that', 'with', 'from', 'have', 'does'].includes(w));
+    if (docText && queryWords.length > 0) {
+      const sentences = docText.split(/[.\n]/).map((s) => s.trim()).filter(Boolean);
+      const matchingSentences = sentences.filter((s) => queryWords.some((w) => s.includes(w)));
+      if (matchingSentences.length > 0) {
+        const topExcerpt = matchingSentences.slice(0, 2).join('. ');
+        return {
+          question: payload.question,
+          answer: `According to the relevant document provisions: "${topExcerpt}."`,
+          citations: [
+            {
+              document_id: documentId,
+              document_name: doc?.metadata.filename || 'agreement.docx',
+              page_number: 1,
+              clause_number: 'Sec. Ref',
+              excerpt: topExcerpt,
+            }
+          ],
+          confidence: 0.89,
+          insufficient_evidence: false,
+          suggested_questions: ['What are the consequences of this clause?', 'How does this apply to both parties?'],
+          verified: true,
+          disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
+        };
+      }
+    }
+
+    // Default insufficient evidence if no matches in document
     return {
       question: payload.question,
-      answer: 'Based on the uploaded agreement provisions, the document outlines mutual contractual duties, compensation terms, notice requirements, and post-termination restrictions.',
-      citations: doc?.clauses[0] ? doc.clauses[0].citations : [],
-      confidence: 0.88,
-      insufficient_evidence: false,
-      suggested_questions: ['What happens if I resign?', 'What are the non-compete terms?'],
+      answer: 'I could not find sufficient information in the uploaded document to answer this reliably.',
+      citations: [],
+      confidence: 0.0,
+      insufficient_evidence: true,
+      suggested_questions: ['What are the termination requirements?', 'What are the compensation terms?'],
       verified: true,
       disclaimer: 'NyayaLens provides AI-assisted legal information and document explanations.',
     };

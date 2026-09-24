@@ -28,11 +28,11 @@ class Settings(BaseSettings):
     TEMP_DIR: Path = Field(default=Path("./storage/temp"))
 
     # AI Provider configuration
-    LLM_PROVIDER: str = "mock"  # "mock", "openai", "gemini", "anthropic"
-    LLM_MODEL: str = "nyayalens-legal-mock-v1"
-    LLM_API_KEY: str = "mock-key-not-required-for-local"
+    LLM_PROVIDER: str = "gemini"  # "gemini", "mock", "openai", "anthropic"
+    LLM_MODEL: str = "gemini-1.5-flash"
+    LLM_API_KEY: str = ""
     LLM_TEMPERATURE: float = 0.0
-    LLM_TIMEOUT_SECONDS: float = 30.0
+    LLM_TIMEOUT_SECONDS: float = 45.0
     LLM_MAX_RETRIES: int = 2
 
     # Embedding configuration

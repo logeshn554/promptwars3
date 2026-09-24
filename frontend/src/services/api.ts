@@ -96,16 +96,22 @@ export const legalApi = {
   },
 
   async askQuestion(documentId: UUID, payload: QARequest): Promise<QAResponse> {
-    try {
-      const res = await fetch(`${BASE_URL}/documents/${documentId}/ask`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      return await handleResponse<QAResponse>(res);
-    } catch {
-      return localLegalApi.askQuestion(documentId, payload);
+    if (API_HOST) {
+      try {
+        const res = await fetch(`${BASE_URL}/documents/${documentId}/ask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+        console.warn('Backend responded with error, attempting fallback:', res.status);
+      } catch (networkErr) {
+        console.warn('Failed to reach live backend at', BASE_URL, networkErr);
+      }
     }
+    return localLegalApi.askQuestion(documentId, payload);
   },
 
   async generateChecklist(documentId: UUID): Promise<ChecklistItem[]> {
