@@ -10,6 +10,7 @@ import {
   BookOpen,
   CornerDownRight,
   CheckSquare,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { legalApi } from './services/api';
 import {
@@ -21,6 +22,7 @@ import {
   LawyerQuestionItem,
   QAResponse,
   PlainLanguageMode,
+  ComparisonResult,
 } from './types/legal';
 
 interface ChatMessage {
@@ -34,7 +36,10 @@ interface ChatMessage {
 export const App: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [activeRightTab, setActiveRightTab] = useState<'clauses' | 'obligations' | 'checklist' | 'lawyer'>('clauses');
+  const [activeRightTab, setActiveRightTab] = useState<'clauses' | 'obligations' | 'checklist' | 'lawyer' | 'compare'>('clauses');
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [comparing, setComparing] = useState<boolean>(false);
+  const [compareDocBId, setCompareDocBId] = useState<string>('');
 
   // Loaded document details
   const [summary, setSummary] = useState<DocumentSummary | null>(null);
@@ -626,6 +631,7 @@ export const App: React.FC = () => {
               { id: 'obligations', label: 'Duties', count: obligations.length },
               { id: 'checklist', label: 'Checklist', count: checklist.length },
               { id: 'lawyer', label: 'Lawyer Qs', count: lawyerQuestions.length },
+              { id: 'compare', label: 'Compare', count: documents.length > 1 ? '2' : '0' },
             ] as const
           ).map((tab) => (
             <button
@@ -633,12 +639,12 @@ export const App: React.FC = () => {
               onClick={() => setActiveRightTab(tab.id)}
               style={{
                 flex: 1,
-                padding: '14px 6px',
+                padding: '14px 4px',
                 border: 'none',
                 borderBottom: activeRightTab === tab.id ? '2px solid #38bdf8' : '2px solid transparent',
                 backgroundColor: activeRightTab === tab.id ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
                 color: activeRightTab === tab.id ? '#38bdf8' : '#64748b',
-                fontSize: '0.78rem',
+                fontSize: '0.74rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
@@ -781,6 +787,116 @@ export const App: React.FC = () => {
                   <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Reason: {q.context_rationale}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* SEMANTIC VERSION COMPARISON TAB */}
+          {activeRightTab === 'compare' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#818cf8', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px' }}>
+                  <ArrowRightLeft size={16} />
+                  <span>Semantic Contract Comparison</span>
+                </div>
+                <p style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                  Detects concrete semantic changes in notice periods, non-competes, and liabilities between two agreements.
+                </p>
+              </div>
+
+              {documents.length < 2 ? (
+                <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fde68a', fontSize: '0.75rem' }}>
+                  Upload at least 2 agreements to compare versions.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
+                      Compare Base Version With:
+                    </label>
+                    <select
+                      value={compareDocBId || (documents.find((d) => d.document_id !== selectedDocId)?.document_id || '')}
+                      onChange={(e) => setCompareDocBId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        backgroundColor: '#121929',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        borderRadius: '8px',
+                        color: '#f8fafc',
+                        fontSize: '0.78rem',
+                      }}
+                    >
+                      {documents.map((d) => (
+                        <option key={d.document_id} value={d.document_id} disabled={d.document_id === selectedDocId}>
+                          {d.filename} {d.document_id === selectedDocId ? '(Current Base)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!selectedDocId) return;
+                      const targetId = compareDocBId || documents.find((d) => d.document_id !== selectedDocId)?.document_id;
+                      if (!targetId || targetId === selectedDocId) return;
+                      setComparing(true);
+                      try {
+                        const res = await legalApi.compareDocuments(selectedDocId, targetId);
+                        setComparisonResult(res);
+                      } catch (err) {
+                        console.error('Comparison error:', err);
+                      } finally {
+                        setComparing(false);
+                      }
+                    }}
+                    disabled={comparing}
+                    style={{
+                      padding: '10px',
+                      backgroundColor: '#2563eb',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: comparing ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <ArrowRightLeft size={14} />
+                    <span>{comparing ? 'Analyzing Differences...' : 'Run Semantic Comparison'}</span>
+                  </button>
+
+                  {comparisonResult && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                      <div className="pro-card" style={{ padding: '12px', borderLeft: '3px solid #38bdf8' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase' }}>
+                          Summary of Differences
+                        </div>
+                        <p style={{ fontSize: '0.76rem', color: '#f8fafc', marginTop: '4px', lineHeight: '1.4' }}>
+                          {comparisonResult.summary_of_differences}
+                        </p>
+                      </div>
+
+                      {comparisonResult.semantic_changes.map((change, i) => (
+                        <div key={i} className="pro-card" style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#f8fafc' }}>{change.topic}</span>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 5px', borderRadius: '4px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#fda4af' }}>
+                              {change.significance}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                            {change.description_of_change}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
