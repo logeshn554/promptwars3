@@ -75,6 +75,7 @@ class QAService:
         user_content = (
             f"TASK: QUESTION ANSWERING\n"
             f"Target Plain-Language Mode: {request.plain_language_mode.value}\n\n"
+            f"EXPLANATION REQUIREMENTS:\n{self._mode_guidance(request.plain_language_mode.value)}\n\n"
             f"--- BEGIN UNTRUSTED DOCUMENT CONTEXT ---\n"
             f"{formatted_context}\n"
             f"--- END UNTRUSTED DOCUMENT CONTEXT ---\n\n"
@@ -170,3 +171,13 @@ class QAService:
             suggested_questions=suggested_qs,
             verified=True,
         )
+
+    @staticmethod
+    def _mode_guidance(mode: str) -> str:
+        """Keep explanations useful to non-lawyers while remaining evidence-grounded."""
+        guidance = {
+            "simple": "Use everyday words and short sentences. State what the clause means for the reader.",
+            "standard": "Explain the obligation or right, its practical effect, and one grounded follow-up question.",
+            "detailed": "Explain the obligation, conditions, deadlines, practical risks, and sensible next steps supported by the excerpts.",
+        }
+        return guidance.get(mode, guidance["standard"])

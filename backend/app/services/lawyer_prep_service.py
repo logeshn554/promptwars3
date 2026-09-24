@@ -17,6 +17,10 @@ class LawyerPreparationService:
         if not meta:
             raise DocumentNotFoundError(f"Document {document_id} was not found.")
 
+        cached_questions = document_store.get_lawyer_questions(document_id)
+        if cached_questions is not None:
+            return cached_questions
+
         clauses = document_store.get_clauses(document_id)
         clauses_context = "\n".join([f"- {c.title}: {c.original_text[:150]}" for c in clauses])
 
@@ -68,4 +72,5 @@ class LawyerPreparationService:
                 ),
             ]
 
+        document_store.save_lawyer_questions(document_id, questions)
         return questions

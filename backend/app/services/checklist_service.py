@@ -17,6 +17,10 @@ class ChecklistService:
         if not meta:
             raise DocumentNotFoundError(f"Document {document_id} was not found.")
 
+        cached_checklist = document_store.get_checklist(document_id)
+        if cached_checklist is not None:
+            return cached_checklist
+
         clauses = document_store.get_clauses(document_id)
         clauses_context = "\n".join([f"- {c.title}: {c.original_text[:150]}" for c in clauses])
 
@@ -75,4 +79,5 @@ class ChecklistService:
                 )
             ]
 
+        document_store.save_checklist(document_id, checklist)
         return checklist

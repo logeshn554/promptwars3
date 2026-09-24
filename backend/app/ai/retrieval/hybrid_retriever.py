@@ -15,6 +15,7 @@ class BM25Retriever:
         self.k1 = k1
         self.b = b
         self.corpus: list[list[str]] = []
+        self.term_frequencies: list[Counter[str]] = []
         self.doc_lengths: list[int] = []
         self.avg_doc_len: float = 0.0
         self.doc_freqs: dict[str, int] = {}
@@ -22,6 +23,9 @@ class BM25Retriever:
 
     def fit(self, documents: list[str]) -> None:
         self.corpus = [self._tokenize(doc) for doc in documents]
+        # Build term frequencies once during indexing instead of rebuilding them
+        # for every legal question.
+        self.term_frequencies = [Counter(doc) for doc in self.corpus]
         self.doc_lengths = [len(doc) for doc in self.corpus]
         total_tokens = sum(self.doc_lengths)
         num_docs = len(self.corpus)
@@ -56,14 +60,13 @@ class BM25Retriever:
         if num_docs == 0 or self.avg_doc_len == 0:
             return scores
 
-        for idx, doc in enumerate(self.corpus):
+        for idx, term_counts in enumerate(self.term_frequencies):
             doc_len = self.doc_lengths[idx]
-            counts = Counter(doc)
             doc_score = 0.0
             for q_term in q_tokens:
-                if q_term not in counts:
+                if q_term not in term_counts:
                     continue
-                tf = counts[q_term]
+                tf = term_counts[q_term]
                 idf = self.idf.get(q_term, 0.0)
                 numerator = tf * (self.k1 + 1.0)
                 denominator = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_len))
@@ -122,7 +125,12 @@ class HybridLegalRetriever:
 
         # 3. Hybrid fusion
         combined_scores = (alpha * dense_scores) + ((1.0 - alpha) * bm25_scores)
-        top_indices = np.argsort(combined_scores)[::-1][:top_k]
+        result_count = min(top_k, len(combined_scores))
+        if result_count == 0:
+            return []
+        # Partial selection avoids sorting every chunk when only the top few are needed.
+        candidate_indices = np.argpartition(combined_scores, -result_count)[-result_count:]
+        top_indices = candidate_indices[np.argsort(combined_scores[candidate_indices])[::-1]]
 
         results: list[tuple[DocumentChunk, float]] = []
         for idx in top_indices:

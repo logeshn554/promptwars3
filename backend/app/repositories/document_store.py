@@ -5,7 +5,9 @@ from app.domain.schemas.document_schemas import (
     ClauseAnalysis,
     DocumentMetadata,
     DocumentSummary,
+    ChecklistItem,
     LegalDocumentGraph,
+    LawyerQuestionItem,
     StructuredObligation,
 )
 from app.parsers.base import ParsedDocumentResult
@@ -22,6 +24,8 @@ class DocumentStore:
         self.obligations_store: dict[UUID, list[StructuredObligation]] = {}
         self.graph_store: dict[UUID, LegalDocumentGraph] = {}
         self.summary_store: dict[UUID, DocumentSummary] = {}
+        self.checklist_store: dict[UUID, list[ChecklistItem]] = {}
+        self.lawyer_questions_store: dict[UUID, list[LawyerQuestionItem]] = {}
 
     def save_document(
         self,
@@ -82,6 +86,18 @@ class DocumentStore:
     def get_summary(self, document_id: UUID) -> DocumentSummary | None:
         return self.summary_store.get(document_id)
 
+    def save_checklist(self, document_id: UUID, checklist: list[ChecklistItem]) -> None:
+        self.checklist_store[document_id] = checklist
+
+    def get_checklist(self, document_id: UUID) -> list[ChecklistItem] | None:
+        return self.checklist_store.get(document_id)
+
+    def save_lawyer_questions(self, document_id: UUID, questions: list[LawyerQuestionItem]) -> None:
+        self.lawyer_questions_store[document_id] = questions
+
+    def get_lawyer_questions(self, document_id: UUID) -> list[LawyerQuestionItem] | None:
+        return self.lawyer_questions_store.get(document_id)
+
     def delete_document(self, document_id: UUID) -> bool:
         if document_id in self.metadata_store:
             del self.metadata_store[document_id]
@@ -91,6 +107,8 @@ class DocumentStore:
             self.obligations_store.pop(document_id, None)
             self.graph_store.pop(document_id, None)
             self.summary_store.pop(document_id, None)
+            self.checklist_store.pop(document_id, None)
+            self.lawyer_questions_store.pop(document_id, None)
             return True
         return False
 
