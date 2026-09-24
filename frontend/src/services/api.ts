@@ -12,7 +12,8 @@ import {
 } from '../types/legal';
 import { localLegalApi } from './localApi';
 
-const API_HOST = import.meta.env.VITE_API_BASE_URL || '';
+const rawHost = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const API_HOST = rawHost.replace(/\/+$/, '');
 const BASE_URL = `${API_HOST}/api/v1`;
 
 async function handleResponse<T>(res: Response): Promise<T> {
