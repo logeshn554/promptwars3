@@ -7,16 +7,9 @@ import {
   FileText,
   ShieldCheck,
   AlertTriangle,
-  ChevronRight,
-  ArrowRightLeft,
-  CheckSquare,
-  HelpCircle,
-  ExternalLink,
   BookOpen,
   CornerDownRight,
-  Search,
-  CheckCircle2,
-  Trash2
+  CheckSquare,
 } from 'lucide-react';
 import { legalApi } from './services/api';
 import {
@@ -49,7 +42,6 @@ export const App: React.FC = () => {
   const [obligations, setObligations] = useState<StructuredObligation[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [lawyerQuestions, setLawyerQuestions] = useState<LawyerQuestionItem[]>([]);
-  const [loadingDoc, setLoadingDoc] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
 
   // Chat state
@@ -84,7 +76,6 @@ export const App: React.FC = () => {
 
   const handleSelectDoc = async (docId: string) => {
     setSelectedDocId(docId);
-    setLoadingDoc(true);
     try {
       const [sum, cls, obls, chk, lq] = await Promise.all([
         legalApi.getSummary(docId).catch(() => null),
@@ -102,7 +93,6 @@ export const App: React.FC = () => {
       const active = documents.find((d) => d.document_id === docId);
       const title = active ? active.filename : 'Document';
 
-      // Seed welcoming system message for this document
       setMessages([
         {
           id: 'welcome-' + docId,
@@ -111,8 +101,8 @@ export const App: React.FC = () => {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
-    } finally {
-      setLoadingDoc(false);
+    } catch (err) {
+      console.error('Failed to select document:', err);
     }
   };
 
@@ -148,7 +138,10 @@ export const App: React.FC = () => {
     setChatLoading(true);
 
     try {
-      const resp = await legalApi.askQuestion(selectedDocId, textToSend, explainMode);
+      const resp = await legalApi.askQuestion(selectedDocId, {
+        question: textToSend,
+        plain_language_mode: explainMode,
+      });
       const aiMsg: ChatMessage = {
         id: 'ai-' + Date.now(),
         sender: 'assistant',
@@ -158,6 +151,7 @@ export const App: React.FC = () => {
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: unknown) {
+      console.error(err);
       const errorMsg: ChatMessage = {
         id: 'err-' + Date.now(),
         sender: 'assistant',
@@ -174,7 +168,7 @@ export const App: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#080b12', overflow: 'hidden' }}>
-      {/* 1. LEFT SIDEBAR: DOCS & APP BRAND */}
+      {/* 1. LEFT SIDEBAR */}
       <aside
         style={{
           width: '280px',
@@ -185,7 +179,6 @@ export const App: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        {/* Brand Header */}
         <div style={{ padding: '20px 18px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
@@ -226,7 +219,6 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Upload Button */}
         <div style={{ padding: '14px 18px' }}>
           <input
             type="file"
@@ -260,7 +252,6 @@ export const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Document List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', padding: '8px 8px 4px' }}>
             Active Documents ({documents.length})
@@ -300,7 +291,7 @@ export const App: React.FC = () => {
                       {doc.filename}
                     </div>
                     <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                      {doc.page_count} {doc.page_count === 1 ? 'page' : 'pages'} • {doc.chunk_count} chunks
+                      {doc.page_count} {doc.page_count === 1 ? 'page' : 'pages'}
                     </div>
                   </div>
                 </div>
@@ -309,7 +300,6 @@ export const App: React.FC = () => {
           })}
         </div>
 
-        {/* Safe AI Footer Notice */}
         <div style={{ padding: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#090d17' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontSize: '0.74rem', fontWeight: 600 }}>
             <ShieldCheck size={16} />
@@ -321,9 +311,8 @@ export const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* 2. CENTER: PRO AI CHAT BOT COPILOT */}
+      {/* 2. CENTER: PRO AI CHAT BOT */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, position: 'relative' }}>
-        {/* Chat Top Bar */}
         <div
           style={{
             height: '64px',
@@ -343,12 +332,11 @@ export const App: React.FC = () => {
                 {activeDoc ? activeDoc.filename : 'Select a document'}
               </span>
               <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '10px' }}>
-                {summary?.agreement_type || 'Legal Intelligence Session'}
+                {summary?.document_type || 'Legal Intelligence Session'}
               </span>
             </div>
           </div>
 
-          {/* Mode Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#121929', padding: '4px', borderRadius: '8px' }}>
             {(['simple', 'standard', 'detailed'] as PlainLanguageMode[]).map((m) => (
               <button
@@ -373,7 +361,6 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Chat Messages Stream */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {messages.map((msg) => {
             const isAi = msg.sender === 'assistant';
@@ -419,7 +406,6 @@ export const App: React.FC = () => {
                 >
                   <p style={{ fontSize: '0.9rem', lineHeight: '1.6', whiteSpace: 'pre-line' }}>{msg.text}</p>
 
-                  {/* Insufficient Evidence Warning Banner */}
                   {msg.response?.insufficient_evidence && (
                     <div
                       style={{
@@ -443,7 +429,6 @@ export const App: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Grounded Citations */}
                   {msg.response?.citations && msg.response.citations.length > 0 && (
                     <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                       <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
@@ -458,15 +443,14 @@ export const App: React.FC = () => {
                             onClick={() => setHighlightedCitation(c.excerpt)}
                           >
                             <BookOpen size={12} />
-                            <span>Clause {c.clause_number}</span>
-                            <span style={{ opacity: 0.6 }}>• P.{c.page_number}</span>
+                            <span>Clause {c.clause_number || idx + 1}</span>
+                            {c.page_number && <span style={{ opacity: 0.6 }}>• P.{c.page_number}</span>}
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Follow-up Questions */}
                   {msg.response?.suggested_questions && msg.response.suggested_questions.length > 0 && (
                     <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {msg.response.suggested_questions.map((q, idx) => (
@@ -537,7 +521,6 @@ export const App: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Prompts Bar */}
         <div style={{ padding: '0 24px', display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {[
             'What happens if I resign?',
@@ -565,7 +548,6 @@ export const App: React.FC = () => {
           ))}
         </div>
 
-        {/* Input Bar */}
         <div style={{ padding: '16px 24px 24px' }}>
           <form
             onSubmit={(e) => {
@@ -620,7 +602,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. RIGHT PANEL: STRUCTURED CONTRACT INTELLIGENCE */}
+      {/* 3. RIGHT PANEL */}
       <aside
         style={{
           width: '380px',
@@ -631,7 +613,6 @@ export const App: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        {/* Right Tab Headers */}
         <div
           style={{
             display: 'flex',
@@ -673,7 +654,6 @@ export const App: React.FC = () => {
           ))}
         </div>
 
-        {/* Tab Content Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {highlightedCitation && (
             <div
@@ -702,7 +682,6 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* CLAUSES TAB */}
           {activeRightTab === 'clauses' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {clauses.map((c, i) => (
@@ -733,27 +712,30 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* OBLIGATIONS TAB */}
           {activeRightTab === 'obligations' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {obligations.map((obl, i) => (
                 <div key={i} className="pro-card" style={{ padding: '14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8' }}>{obl.party}</span>
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        backgroundColor: obl.consequence_level === 'high' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                        color: obl.consequence_level === 'high' ? '#fda4af' : '#fde68a',
-                      }}
-                    >
-                      {obl.consequence_level.toUpperCase()}
-                    </span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8' }}>{obl.actor}</span>
+                    {obl.consequence && (
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                          color: '#fda4af',
+                        }}
+                      >
+                        HIGH
+                      </span>
+                    )}
                   </div>
-                  <p style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '6px' }}>{obl.duty}</p>
+                  <p style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '6px' }}>
+                    {obl.action} {obl.object}
+                  </p>
                   {obl.deadline && (
                     <div style={{ fontSize: '0.72rem', color: '#f59e0b' }}>⏰ Deadline: {obl.deadline}</div>
                   )}
@@ -762,7 +744,6 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* CHECKLIST TAB */}
           {activeRightTab === 'checklist' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {checklist.map((item, i) => (
@@ -779,14 +760,17 @@ export const App: React.FC = () => {
                   <CheckSquare size={16} color="#10b981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc' }}>{item.task}</div>
-                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '2px' }}>{item.rationale}</div>
+                    {item.source_clause && (
+                      <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '2px' }}>
+                        Source: Clause {item.source_clause}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* LAWYER QUESTIONS TAB */}
           {activeRightTab === 'lawyer' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {lawyerQuestions.map((q, i) => (
@@ -794,7 +778,7 @@ export const App: React.FC = () => {
                   <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc', marginBottom: '4px' }}>
                     "{q.question}"
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Reason: {q.why_ask}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Reason: {q.context_rationale}</div>
                 </div>
               ))}
             </div>
