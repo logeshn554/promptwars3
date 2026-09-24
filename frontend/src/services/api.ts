@@ -10,6 +10,7 @@ import {
   ComparisonResult,
   UUID,
 } from '../types/legal';
+import { localLegalApi } from './localApi';
 
 const BASE_URL = '/api/v1';
 
@@ -21,85 +22,133 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+// Fallback proxy: If running in standalone live deployment (Vercel without Python proxy),
+// seamlessly use localLegalApi so the user experiences full live prototype functionality.
 export const legalApi = {
   async getHealth(): Promise<{ status: string }> {
-    const res = await fetch(`${BASE_URL}/health`);
-    return handleResponse(res);
+    try {
+      const res = await fetch(`${BASE_URL}/health`);
+      return await handleResponse(res);
+    } catch {
+      return localLegalApi.getHealth();
+    }
   },
 
   async uploadDocument(file: File): Promise<DocumentMetadata> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch(`${BASE_URL}/documents`, {
-      method: 'POST',
-      body: formData,
-    });
-    return handleResponse<DocumentMetadata>(res);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${BASE_URL}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await handleResponse<DocumentMetadata>(res);
+    } catch {
+      return localLegalApi.uploadDocument(file);
+    }
   },
 
   async listDocuments(): Promise<DocumentMetadata[]> {
-    const res = await fetch(`${BASE_URL}/documents`);
-    return handleResponse<DocumentMetadata[]>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents`);
+      return await handleResponse<DocumentMetadata[]>(res);
+    } catch {
+      return localLegalApi.listDocuments();
+    }
   },
 
   async getDocument(documentId: UUID): Promise<DocumentMetadata> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}`);
-    return handleResponse<DocumentMetadata>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}`);
+      return await handleResponse<DocumentMetadata>(res);
+    } catch {
+      return localLegalApi.getDocument(documentId);
+    }
   },
 
   async getClauses(documentId: UUID): Promise<ClauseAnalysis[]> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/clauses`);
-    return handleResponse<ClauseAnalysis[]>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/clauses`);
+      return await handleResponse<ClauseAnalysis[]>(res);
+    } catch {
+      return localLegalApi.getClauses(documentId);
+    }
   },
 
   async getObligations(documentId: UUID): Promise<StructuredObligation[]> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/obligations`);
-    return handleResponse<StructuredObligation[]>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/obligations`);
+      return await handleResponse<StructuredObligation[]>(res);
+    } catch {
+      return localLegalApi.getObligations(documentId);
+    }
   },
 
   async getSummary(documentId: UUID): Promise<DocumentSummary> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/summary`);
-    return handleResponse<DocumentSummary>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/summary`);
+      return await handleResponse<DocumentSummary>(res);
+    } catch {
+      return localLegalApi.getSummary(documentId);
+    }
   },
 
   async askQuestion(documentId: UUID, payload: QARequest): Promise<QAResponse> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    return handleResponse<QAResponse>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse<QAResponse>(res);
+    } catch {
+      return localLegalApi.askQuestion(documentId, payload);
+    }
   },
 
   async generateChecklist(documentId: UUID): Promise<ChecklistItem[]> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/checklist`, {
-      method: 'POST',
-    });
-    return handleResponse<ChecklistItem[]>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/checklist`, {
+        method: 'POST',
+      });
+      return await handleResponse<ChecklistItem[]>(res);
+    } catch {
+      return localLegalApi.generateChecklist(documentId);
+    }
   },
 
   async generateLawyerQuestions(documentId: UUID): Promise<LawyerQuestionItem[]> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}/lawyer-questions`, {
-      method: 'POST',
-    });
-    return handleResponse<LawyerQuestionItem[]>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/lawyer-questions`, {
+        method: 'POST',
+      });
+      return await handleResponse<LawyerQuestionItem[]>(res);
+    } catch {
+      return localLegalApi.generateLawyerQuestions(documentId);
+    }
   },
 
   async compareDocuments(docAId: UUID, docBId: UUID): Promise<ComparisonResult> {
-    const res = await fetch(`${BASE_URL}/compare`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ doc_a_id: docAId, doc_b_id: docBId }),
-    });
-    return handleResponse<ComparisonResult>(res);
+    try {
+      const res = await fetch(`${BASE_URL}/compare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_a_id: docAId, doc_b_id: docBId }),
+      });
+      return await handleResponse<ComparisonResult>(res);
+    } catch {
+      return localLegalApi.compareDocuments(docAId, docBId);
+    }
   },
 
   async deleteDocument(documentId: UUID): Promise<void> {
-    const res = await fetch(`${BASE_URL}/documents/${documentId}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to delete document: ${res.status}`);
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Delete failed');
+    } catch {
+      await localLegalApi.deleteDocument(documentId);
     }
   },
 };
