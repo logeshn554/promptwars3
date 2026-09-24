@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from app.ai.providers.base import BaseLLMProvider, LLMRequest, LLMResponse
 
@@ -44,12 +45,13 @@ class MockLLMProvider(BaseLLMProvider):
         q_match = re.search(r"USER QUESTION:\s*(.*)", text, re.IGNORECASE)
         question_line = q_match.group(1).lower() if q_match else text.lower()
 
+        empty_citations: list[dict[str, Any]] = []
         if "dog food" in question_line or "pet" in question_line or "solar panel" in question_line or "arbitrary non-existent topic" in question_line:
-            ans = {
+            ans: dict[str, Any] = {
                 "answer": "I could not find sufficient information in the uploaded document to answer this reliably.",
                 "insufficient_evidence": True,
                 "confidence": 0.0,
-                "citations": [],
+                "citations": empty_citations,
                 "suggested_questions": [
                     "What are the primary termination terms?",
                     "What are the compensation terms?"
@@ -78,7 +80,7 @@ class MockLLMProvider(BaseLLMProvider):
                 "answer": "Based on the retrieved document clauses, the provisions outline specific operational duties and responsibilities for both parties.",
                 "insufficient_evidence": False,
                 "confidence": 0.85,
-                "citations": [],
+                "citations": empty_citations,
                 "suggested_questions": ["What are the key obligations?", "What are the dispute terms?"]
             }
 
@@ -114,9 +116,9 @@ class MockLLMProvider(BaseLLMProvider):
                 "plain_language_explanation": "You cannot work for a competing business for 12 months after leaving the company.",
                 "parties": ["John Doe"],
                 "obligations": ["Refrain from working for competing entities"],
-                "rights": [],
+                "rights": list[str](),
                 "deadlines": ["12 months post-termination"],
-                "financial_implications": [],
+                "financial_implications": list[str](),
                 "restrictions": ["Non-compete applies within designated territory"],
                 "questions_to_clarify": ["Is the non-compete enforceable in my jurisdiction?"],
                 "confidence": 0.94,

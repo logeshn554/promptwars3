@@ -1,17 +1,18 @@
 import hashlib
 from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 
 
 class BaseEmbeddingProvider(ABC):
     @abstractmethod
-    def embed_texts(self, texts: list[str]) -> np.ndarray:
+    def embed_texts(self, texts: list[str]) -> np.ndarray[Any, Any]:
         """Generate normalized vector embeddings for a list of strings."""
         pass
 
     @abstractmethod
-    def embed_query(self, query: str) -> np.ndarray:
+    def embed_query(self, query: str) -> np.ndarray[Any, Any]:
         """Generate normalized vector embedding for a single query."""
         pass
 
@@ -24,7 +25,7 @@ class MockEmbeddingProvider(BaseEmbeddingProvider):
     def __init__(self, dimension: int = 384) -> None:
         self.dimension = dimension
 
-    def _hash_to_vector(self, text: str) -> np.ndarray:
+    def _hash_to_vector(self, text: str) -> np.ndarray[Any, Any]:
         vec = np.zeros(self.dimension, dtype=np.float32)
         tokens = text.lower().split()
         if not tokens:
@@ -46,8 +47,8 @@ class MockEmbeddingProvider(BaseEmbeddingProvider):
             vec /= norm
         return vec
 
-    def embed_texts(self, texts: list[str]) -> np.ndarray:
+    def embed_texts(self, texts: list[str]) -> np.ndarray[Any, Any]:
         return np.array([self._hash_to_vector(t) for t in texts], dtype=np.float32)
 
-    def embed_query(self, query: str) -> np.ndarray:
+    def embed_query(self, query: str) -> np.ndarray[Any, Any]:
         return self._hash_to_vector(query)

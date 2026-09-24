@@ -1,6 +1,7 @@
 import math
 import re
 from collections import Counter
+from typing import Any
 
 import numpy as np
 
@@ -48,7 +49,7 @@ class BM25Retriever:
         tokens = re.findall(r"\b\w+\b", text.lower())
         return [t for t in tokens if t not in self.STOPWORDS]
 
-    def score(self, query: str) -> np.ndarray:
+    def score(self, query: str) -> np.ndarray[Any, Any]:
         q_tokens = self._tokenize(query)
         num_docs = len(self.corpus)
         scores = np.zeros(num_docs, dtype=np.float32)
@@ -83,7 +84,7 @@ class HybridLegalRetriever:
     def __init__(self, embedding_provider: BaseEmbeddingProvider | None = None) -> None:
         self.embedding_provider = embedding_provider or MockEmbeddingProvider()
         self.chunks: list[DocumentChunk] = []
-        self.embeddings: np.ndarray | None = None
+        self.embeddings: np.ndarray[Any, Any] | None = None
         self.bm25 = BM25Retriever()
 
     def index_chunks(self, chunks: list[DocumentChunk]) -> None:
