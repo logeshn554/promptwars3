@@ -9,6 +9,7 @@ from app.domain.schemas.document_schemas import (
     StructuredObligation,
 )
 from app.parsers.base import ParsedDocumentResult
+from app.repositories.neon_db import neon_db
 
 
 class DocumentStore:
@@ -29,6 +30,16 @@ class DocumentStore:
     ) -> None:
         self.metadata_store[metadata.document_id] = metadata
         self.parsed_store[metadata.document_id] = parsed
+
+        # Sync to Neon Postgres if configured
+        neon_db.store_document(
+            document_id=metadata.document_id,
+            filename=metadata.filename,
+            file_type=metadata.file_type,
+            file_size=metadata.file_size_bytes,
+            page_count=metadata.page_count,
+            title=metadata.title,
+        )
 
         # Build and store hybrid retriever index
         retriever = HybridLegalRetriever()

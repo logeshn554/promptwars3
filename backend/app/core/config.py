@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: list[str] = [".pdf", ".docx", ".txt"]
     RATE_LIMIT_PER_MINUTE: int = 60
 
-    # Storage paths
+    # Storage paths & Database (Neon Serverless PostgreSQL)
+    DATABASE_URL: str | None = None
     STORAGE_DIR: Path = Field(default=Path("./storage"))
     TEMP_DIR: Path = Field(default=Path("./storage/temp"))
 
