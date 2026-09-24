@@ -1,0 +1,21 @@
+EMPLOYMENT AGREEMENT (VERSION A)
+
+SECTION 1: TITLE AND PARTIES
+This Agreement is entered into between Acme Corporation Inc. ("Company") and John Doe ("Employee").
+
+SECTION 2: POSITION AND DUTIES
+Employee shall serve as Principal Software Architect and shall perform all customary duties with reasonable care and diligence.
+
+SECTION 3: COMPENSATION
+Company shall pay Employee an annual base salary payable semi-monthly on the 15th and last day of each month.
+
+SECTION 8: RESTRICTIVE COVENANTS
+8.1 Non-Competition: Employee agrees that for a period of six (6) months following termination of employment for any reason, Employee shall not engage in any competing software enterprise within the territory.
+8.2 Non-Solicitation: Employee shall not solicit Company clients or employees for a period of twelve (12) months post-termination.
+
+SECTION 11: TERMINATION
+11.1 At-Will: Employment is at-will and may be terminated by either party.
+11.2 Voluntary Resignation: In the event of voluntary resignation, Employee shall provide thirty (30) days prior written notice.
+
+SECTION 14: DISPUTE RESOLUTION
+Any controversy or claim arising out of this Agreement shall be settled by binding arbitration in New York in accordance with AAA rules.
