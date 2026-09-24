@@ -63,8 +63,18 @@ class GeminiLLMProvider(BaseLLMProvider):
                 parts = candidates[0].get("content", {}).get("parts", [])
                 text_output = parts[0].get("text", "") if parts else ""
 
+                # Strip markdown code blocks if returned by Gemini (e.g. ```json ... ```)
+                cleaned_text = text_output.strip()
+                if cleaned_text.startswith("```"):
+                    lines = cleaned_text.splitlines()
+                    if lines and lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    cleaned_text = "\n".join(lines).strip()
+
                 return LLMResponse(
-                    content=text_output,
+                    content=cleaned_text,
                     prompt_tokens=data.get("usageMetadata", {}).get("promptTokenCount", 0),
                     completion_tokens=data.get("usageMetadata", {}).get("candidatesTokenCount", 0),
                     model=self.model,
