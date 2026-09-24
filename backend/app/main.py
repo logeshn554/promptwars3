@@ -78,6 +78,16 @@ def create_app() -> FastAPI:
             "frame-ancestors 'none';"
         )
 
+        # Ensure CORS headers are explicitly guaranteed on all responses
+        origin = request.headers.get("origin")
+        is_vercel_deployment = origin and origin.startswith("https://") and origin.endswith(".vercel.app")
+        is_local_development = origin in settings.CORS_ORIGINS
+        if origin and (is_vercel_deployment or is_local_development):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+
         logger.info(
             f"Completed {request.method} {request.url.path} with status {response.status_code} in {duration_ms}ms",
             extra={"correlation_id": correlation_id, "duration_ms": duration_ms},

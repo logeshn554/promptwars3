@@ -1,7 +1,9 @@
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import create_app
 from app.ai.verification.verifier import EvidenceVerificationService
 from app.core.exceptions import FileTooLargeError, UnsupportedFileTypeError
 from app.core.security import (
@@ -65,3 +67,21 @@ def test_prompt_injection_detection() -> None:
     detected, pattern = inspect_for_prompt_injection(injection_text)
     assert detected is True
     assert pattern is not None
+
+
+def test_vercel_origin_receives_cors_headers() -> None:
+    """The deployed Vercel client must be permitted to call the Render API."""
+    origin = "https://promptwars3-lac.vercel.app"
+    client = TestClient(create_app())
+
+    response = client.options(
+        "/api/v1/documents/example/ask",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["access-control-allow-credentials"] == "true"
