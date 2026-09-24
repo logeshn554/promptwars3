@@ -15,12 +15,19 @@ class GeminiLLMProvider(BaseLLMProvider):
     """
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = api_key or settings.LLM_API_KEY
-        raw_model = (model or settings.LLM_MODEL or "gemini-1.5-flash").strip()
-        # Map non-existent or experimental names like gemini-3.8-flash to valid Google AI Studio model
-        if "3.8" in raw_model or "gemini-3" in raw_model:
+        raw_model = (model or settings.LLM_MODEL or "gemini-1.5-flash").strip().lower()
+
+        # Map experimental or unavailable model aliases (like Gemini 3 Flash / gemini-3.8-flash)
+        # to Google AI Studio's verified high-throughput endpoints
+        if "3" in raw_model or "gemini-3" in raw_model:
             self.model = "gemini-1.5-flash"
+        elif "2" in raw_model:
+            self.model = "gemini-2.0-flash"
+        elif "pro" in raw_model:
+            self.model = "gemini-1.5-pro"
         else:
-            self.model = raw_model
+            self.model = "gemini-1.5-flash"
+
         self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
 
     async def generate(self, request: LLMRequest) -> LLMResponse:
