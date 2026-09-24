@@ -15,7 +15,12 @@ class GeminiLLMProvider(BaseLLMProvider):
     """
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = api_key or settings.LLM_API_KEY
-        self.model = model or settings.LLM_MODEL or "gemini-1.5-flash"
+        raw_model = (model or settings.LLM_MODEL or "gemini-1.5-flash").strip()
+        # Map non-existent or experimental names like gemini-3.8-flash to valid Google AI Studio model
+        if "3.8" in raw_model or "gemini-3" in raw_model:
+            self.model = "gemini-1.5-flash"
+        else:
+            self.model = raw_model
         self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
 
     async def generate(self, request: LLMRequest) -> LLMResponse:
@@ -24,12 +29,19 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         # Convert standardized messages into Gemini contents format
         contents = []
+        system_instruction = None
+
         for msg in request.messages:
-            role = "model" if msg.role == "assistant" else "user"
-            contents.append({
-                "role": role,
-                "parts": [{"text": msg.content}]
-            })
+            if msg.role == "system":
+                system_instruction = {
+                    "parts": [{"text": msg.content}]
+                }
+            else:
+                role = "model" if msg.role == "assistant" else "user"
+                contents.append({
+                    "role": role,
+                    "parts": [{"text": msg.content}]
+                })
 
         gen_config: dict[str, Any] = {
             "temperature": request.temperature,
@@ -42,6 +54,8 @@ class GeminiLLMProvider(BaseLLMProvider):
             "contents": contents,
             "generationConfig": gen_config,
         }
+        if system_instruction:
+            payload["systemInstruction"] = system_instruction
 
         headers = {
             "Content-Type": "application/json",

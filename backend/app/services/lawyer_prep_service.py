@@ -28,8 +28,8 @@ class LawyerPreparationService:
             json_mode=True,
         )
 
-        res = await self.llm.generate(req)
         try:
+            res = await self.llm.generate(req)
             items_data = json.loads(res.content)
             if not isinstance(items_data, list):
                 items_data = [items_data]
