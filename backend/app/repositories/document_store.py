@@ -2,10 +2,10 @@ from uuid import UUID
 
 from app.ai.retrieval.hybrid_retriever import HybridLegalRetriever
 from app.domain.schemas.document_schemas import (
+    ChecklistItem,
     ClauseAnalysis,
     DocumentMetadata,
     DocumentSummary,
-    ChecklistItem,
     LegalDocumentGraph,
     LawyerQuestionItem,
     StructuredObligation,

@@ -56,11 +56,11 @@ class PDFDocumentParser(BaseDocumentParser):
                 raise DocumentParseError(f"Corrupted or invalid PDF {filename}: {str(e)}") from e
 
             if reader.is_encrypted:
-                raise DocumentParseError(f"PDF {filename} is password-protected or encrypted.")
+                raise DocumentParseError(f"PDF {filename} is password-protected or encrypted.") from None
 
             page_count = len(reader.pages)
             if page_count == 0:
-                raise DocumentParseError(f"PDF {filename} contains zero pages.")
+                raise DocumentParseError(f"PDF {filename} contains zero pages.") from None
 
             all_chunks = []
             raw_text_parts = []

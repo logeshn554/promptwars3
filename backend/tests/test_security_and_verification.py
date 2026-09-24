@@ -3,7 +3,6 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
 from app.ai.verification.verifier import EvidenceVerificationService
 from app.core.exceptions import FileTooLargeError, UnsupportedFileTypeError
 from app.core.security import (
@@ -12,6 +11,7 @@ from app.core.security import (
     validate_file_metadata,
 )
 from app.domain.schemas.document_schemas import DocumentChunk, ProvenanceCitation
+from app.main import create_app
 
 
 def test_citation_verification_success() -> None:
