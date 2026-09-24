@@ -28,6 +28,10 @@ class ComparisonService:
         if not meta_a or not meta_b:
             raise DocumentNotFoundError("One or both documents for comparison could not be found.")
 
+        cached_result = document_store.get_comparison(doc_a_id, doc_b_id)
+        if cached_result is not None:
+            return cached_result
+
         parsed_a = document_store.get_parsed(doc_a_id)
         parsed_b = document_store.get_parsed(doc_b_id)
 
@@ -100,7 +104,7 @@ class ComparisonService:
             except Exception as parse_err:
                 logger.debug(f"Skipping malformed semantic change: {parse_err}")
 
-        return ComparisonResult(
+        result = ComparisonResult(
             comparison_id=uuid4(),
             doc_a_id=doc_a_id,
             doc_a_name=meta_a.filename,
@@ -114,3 +118,5 @@ class ComparisonService:
                 "Comparison completed. Detected semantic changes across key clauses."
             ),
         )
+        document_store.save_comparison(result)
+        return result

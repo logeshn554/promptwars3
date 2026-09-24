@@ -4,10 +4,12 @@ from app.ai.retrieval.hybrid_retriever import HybridLegalRetriever
 from app.domain.schemas.document_schemas import (
     ChecklistItem,
     ClauseAnalysis,
+    ComparisonResult,
     DocumentMetadata,
     DocumentSummary,
     LegalDocumentGraph,
     LawyerQuestionItem,
+    QAResponse,
     StructuredObligation,
 )
 from app.parsers.base import ParsedDocumentResult
@@ -26,6 +28,8 @@ class DocumentStore:
         self.summary_store: dict[UUID, DocumentSummary] = {}
         self.checklist_store: dict[UUID, list[ChecklistItem]] = {}
         self.lawyer_questions_store: dict[UUID, list[LawyerQuestionItem]] = {}
+        self.qa_response_store: dict[UUID, dict[tuple[str, str, int], QAResponse]] = {}
+        self.comparison_store: dict[tuple[UUID, UUID], ComparisonResult] = {}
 
     def save_document(
         self,
@@ -98,6 +102,18 @@ class DocumentStore:
     def get_lawyer_questions(self, document_id: UUID) -> list[LawyerQuestionItem] | None:
         return self.lawyer_questions_store.get(document_id)
 
+    def get_qa_response(self, document_id: UUID, cache_key: tuple[str, str, int]) -> QAResponse | None:
+        return self.qa_response_store.get(document_id, {}).get(cache_key)
+
+    def save_qa_response(self, document_id: UUID, cache_key: tuple[str, str, int], response: QAResponse) -> None:
+        self.qa_response_store.setdefault(document_id, {})[cache_key] = response
+
+    def get_comparison(self, doc_a_id: UUID, doc_b_id: UUID) -> ComparisonResult | None:
+        return self.comparison_store.get((doc_a_id, doc_b_id))
+
+    def save_comparison(self, result: ComparisonResult) -> None:
+        self.comparison_store[(result.doc_a_id, result.doc_b_id)] = result
+
     def delete_document(self, document_id: UUID) -> bool:
         if document_id in self.metadata_store:
             del self.metadata_store[document_id]
@@ -109,6 +125,12 @@ class DocumentStore:
             self.summary_store.pop(document_id, None)
             self.checklist_store.pop(document_id, None)
             self.lawyer_questions_store.pop(document_id, None)
+            self.qa_response_store.pop(document_id, None)
+            self.comparison_store = {
+                key: result
+                for key, result in self.comparison_store.items()
+                if document_id not in key
+            }
             return True
         return False
 

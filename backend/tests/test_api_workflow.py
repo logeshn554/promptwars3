@@ -58,6 +58,11 @@ async def test_full_document_workflow() -> None:
         assert qa_data["insufficient_evidence"] is False
         assert "90 days" in qa_data["answer"] or "ninety" in qa_data["answer"]
         assert len(qa_data["citations"]) > 0
+        cached_qa_res = await client.post(
+            f"/api/v1/documents/{doc_id}/ask",
+            json={"question": "What happens if I resign?", "plain_language_mode": "standard"},
+        )
+        assert cached_qa_res.json() == qa_data
 
         # 6. Q&A Insufficient Evidence query
         unknown_res = await client.post(
@@ -71,11 +76,15 @@ async def test_full_document_workflow() -> None:
         check_res = await client.post(f"/api/v1/documents/{doc_id}/checklist")
         assert check_res.status_code == 200
         assert len(check_res.json()) > 0
+        cached_check_res = await client.post(f"/api/v1/documents/{doc_id}/checklist")
+        assert cached_check_res.json() == check_res.json()
 
         # 8. Lawyer Preparation questions
         lawyer_res = await client.post(f"/api/v1/documents/{doc_id}/lawyer-questions")
         assert lawyer_res.status_code == 200
         assert len(lawyer_res.json()) > 0
+        cached_lawyer_res = await client.post(f"/api/v1/documents/{doc_id}/lawyer-questions")
+        assert cached_lawyer_res.json() == lawyer_res.json()
 
         # 9. Comparison: Upload Version B
         sample_doc_v2 = (

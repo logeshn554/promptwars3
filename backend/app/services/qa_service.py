@@ -41,6 +41,15 @@ class QAService:
         if not metadata:
             raise DocumentNotFoundError(f"Document {document_id} was not found.")
 
+        cache_key = (
+            " ".join(request.question.casefold().split()),
+            request.plain_language_mode.value,
+            request.top_k,
+        )
+        cached_response = document_store.get_qa_response(document_id, cache_key)
+        if cached_response is not None:
+            return cached_response
+
         retriever = document_store.get_retriever(document_id)
         if not retriever:
             raise DocumentNotFoundError(f"Index for document {document_id} is missing.")
@@ -162,7 +171,7 @@ class QAService:
         avg_retrieval_score = sum(score for _, score in top_chunks_and_scores) / len(top_chunks_and_scores)
         honest_confidence = round(min(1.0, (avg_retrieval_score * 0.4) + (base_confidence * 0.6)), 2)
 
-        return QAResponse(
+        response = QAResponse(
             question=request.question,
             answer=answer_text,
             citations=validated_citations,
@@ -171,6 +180,8 @@ class QAService:
             suggested_questions=suggested_qs,
             verified=True,
         )
+        document_store.save_qa_response(document_id, cache_key, response)
+        return response
 
     @staticmethod
     def _mode_guidance(mode: str) -> str:

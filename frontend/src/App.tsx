@@ -483,6 +483,21 @@ export const App: React.FC = () => {
                     </div>
                   )}
 
+                  {msg.response?.disclaimer && (
+                    <p
+                      style={{
+                        marginTop: '12px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        fontSize: '0.72rem',
+                        color: '#94a3b8',
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <strong>Legal information notice:</strong> {msg.response.disclaimer}
+                    </p>
+                  )}
+
                   <div style={{ fontSize: '0.65rem', color: '#64748b', textAlign: 'right', marginTop: '6px' }}>
                     {msg.timestamp}
                   </div>
